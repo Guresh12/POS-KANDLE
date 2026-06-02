@@ -1,0 +1,2599 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: Cloud SaaS POS API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: dashboard
+    description: Dashboard summary endpoints
+  - name: branches
+    description: Branch management
+  - name: products
+    description: Product management
+  - name: categories
+    description: Product categories
+  - name: inventory
+    description: Inventory management
+  - name: customers
+    description: Customer management
+  - name: suppliers
+    description: Supplier management
+  - name: purchases
+    description: Purchase management
+  - name: sales
+    description: Sales and POS
+  - name: expenses
+    description: Expense management
+  - name: reports
+    description: Reports
+  - name: settings
+    description: Business settings
+  - name: users
+    description: User management
+  - name: restaurant
+    description: Restaurant module
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  # ─────── DASHBOARD ───────
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get dashboard summary (today/week/month sales, revenue, profit, expenses)
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /dashboard/top-products:
+    get:
+      operationId: getTopProducts
+      tags: [dashboard]
+      summary: Get top selling products
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Top products list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TopProduct"
+
+  /dashboard/recent-transactions:
+    get:
+      operationId: getRecentTransactions
+      tags: [dashboard]
+      summary: Get recent sales transactions
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Recent transactions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RecentTransaction"
+
+  /dashboard/low-stock:
+    get:
+      operationId: getLowStockAlerts
+      tags: [dashboard]
+      summary: Get low stock product alerts
+      responses:
+        "200":
+          description: Low stock items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LowStockAlert"
+
+  # ─────── BRANCHES ───────
+  /branches:
+    get:
+      operationId: listBranches
+      tags: [branches]
+      summary: List all branches
+      responses:
+        "200":
+          description: Branches list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Branch"
+    post:
+      operationId: createBranch
+      tags: [branches]
+      summary: Create a branch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BranchInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Branch"
+
+  /branches/{id}:
+    get:
+      operationId: getBranch
+      tags: [branches]
+      summary: Get a branch
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Branch
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Branch"
+    patch:
+      operationId: updateBranch
+      tags: [branches]
+      summary: Update a branch
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BranchUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Branch"
+    delete:
+      operationId: deleteBranch
+      tags: [branches]
+      summary: Delete/disable a branch
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ─────── CATEGORIES ───────
+  /categories:
+    get:
+      operationId: listCategories
+      tags: [categories]
+      summary: List product categories
+      responses:
+        "200":
+          description: Categories list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Category"
+    post:
+      operationId: createCategory
+      tags: [categories]
+      summary: Create a category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CategoryInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
+
+  /categories/{id}:
+    patch:
+      operationId: updateCategory
+      tags: [categories]
+      summary: Update a category
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CategoryInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
+    delete:
+      operationId: deleteCategory
+      tags: [categories]
+      summary: Delete a category
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ─────── PRODUCTS ───────
+  /products:
+    get:
+      operationId: listProducts
+      tags: [products]
+      summary: List products
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: categoryId
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: branchId
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: active
+          in: query
+          schema:
+            type: ["boolean", "null"]
+      responses:
+        "200":
+          description: Products list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+    post:
+      operationId: createProduct
+      tags: [products]
+      summary: Create a product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+
+  /products/{id}:
+    get:
+      operationId: getProduct
+      tags: [products]
+      summary: Get a product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Product
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+    patch:
+      operationId: updateProduct
+      tags: [products]
+      summary: Update a product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+    delete:
+      operationId: deleteProduct
+      tags: [products]
+      summary: Delete a product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ─────── INVENTORY ───────
+  /inventory:
+    get:
+      operationId: listInventory
+      tags: [inventory]
+      summary: List inventory levels
+      parameters:
+        - name: branchId
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: productId
+          in: query
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: Inventory list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InventoryItem"
+
+  /inventory/transactions:
+    get:
+      operationId: listInventoryTransactions
+      tags: [inventory]
+      summary: List inventory transactions/ledger
+      parameters:
+        - name: branchId
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: productId
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: type
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: startDate
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: endDate
+          in: query
+          schema:
+            type: ["string", "null"]
+      responses:
+        "200":
+          description: Inventory transactions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InventoryTransaction"
+    post:
+      operationId: createInventoryTransaction
+      tags: [inventory]
+      summary: Record inventory transaction (stock in/out/adjust/transfer)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InventoryTransactionInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InventoryTransaction"
+
+  # ─────── CUSTOMERS ───────
+  /customers:
+    get:
+      operationId: listCustomers
+      tags: [customers]
+      summary: List customers
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Customers list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Customer"
+    post:
+      operationId: createCustomer
+      tags: [customers]
+      summary: Create a customer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+
+  /customers/{id}:
+    get:
+      operationId: getCustomer
+      tags: [customers]
+      summary: Get customer with balance and transactions
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Customer detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerDetail"
+    patch:
+      operationId: updateCustomer
+      tags: [customers]
+      summary: Update a customer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+    delete:
+      operationId: deleteCustomer
+      tags: [customers]
+      summary: Delete a customer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ─────── SUPPLIERS ───────
+  /suppliers:
+    get:
+      operationId: listSuppliers
+      tags: [suppliers]
+      summary: List suppliers
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Suppliers list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Supplier"
+    post:
+      operationId: createSupplier
+      tags: [suppliers]
+      summary: Create a supplier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SupplierInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Supplier"
+
+  /suppliers/{id}:
+    get:
+      operationId: getSupplier
+      tags: [suppliers]
+      summary: Get supplier with balance and transactions
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Supplier detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupplierDetail"
+    patch:
+      operationId: updateSupplier
+      tags: [suppliers]
+      summary: Update a supplier
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SupplierInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Supplier"
+    delete:
+      operationId: deleteSupplier
+      tags: [suppliers]
+      summary: Delete a supplier
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ─────── PURCHASES ───────
+  /purchases:
+    get:
+      operationId: listPurchases
+      tags: [purchases]
+      summary: List purchase orders
+      parameters:
+        - name: supplierId
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: status
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: startDate
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: endDate
+          in: query
+          schema:
+            type: ["string", "null"]
+      responses:
+        "200":
+          description: Purchases list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Purchase"
+    post:
+      operationId: createPurchase
+      tags: [purchases]
+      summary: Create a purchase order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PurchaseInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Purchase"
+
+  /purchases/{id}:
+    get:
+      operationId: getPurchase
+      tags: [purchases]
+      summary: Get purchase detail with items
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Purchase detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PurchaseDetail"
+    patch:
+      operationId: updatePurchase
+      tags: [purchases]
+      summary: Update a purchase
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PurchaseUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Purchase"
+
+  /purchases/{id}/receive:
+    post:
+      operationId: receivePurchase
+      tags: [purchases]
+      summary: Mark purchase as received and update inventory
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Received
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Purchase"
+
+  /purchases/{id}/payments:
+    post:
+      operationId: addPurchasePayment
+      tags: [purchases]
+      summary: Record a payment against a purchase
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentInput"
+      responses:
+        "201":
+          description: Payment recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"
+
+  # ─────── SALES / POS ───────
+  /sales:
+    get:
+      operationId: listSales
+      tags: [sales]
+      summary: List sales
+      parameters:
+        - name: branchId
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: customerId
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: status
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: startDate
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: endDate
+          in: query
+          schema:
+            type: ["string", "null"]
+      responses:
+        "200":
+          description: Sales list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Sale"
+    post:
+      operationId: createSale
+      tags: [sales]
+      summary: Create a new sale / checkout
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaleInput"
+      responses:
+        "201":
+          description: Sale created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SaleDetail"
+
+  /sales/{id}:
+    get:
+      operationId: getSale
+      tags: [sales]
+      summary: Get sale detail with items and payments
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Sale detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SaleDetail"
+    patch:
+      operationId: updateSale
+      tags: [sales]
+      summary: Update sale (hold/void/complete)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaleUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Sale"
+
+  /sales/held:
+    get:
+      operationId: listHeldSales
+      tags: [sales]
+      summary: List held/suspended sales
+      responses:
+        "200":
+          description: Held sales
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Sale"
+
+  /sales/summary:
+    get:
+      operationId: getSalesSummary
+      tags: [sales]
+      summary: Get aggregated sales summary by date range
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [today, week, month, custom]
+        - name: startDate
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: endDate
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: branchId
+          in: query
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: Sales summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalesSummary"
+
+  # ─────── EXPENSES ───────
+  /expenses:
+    get:
+      operationId: listExpenses
+      tags: [expenses]
+      summary: List expenses
+      parameters:
+        - name: startDate
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: endDate
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: categoryId
+          in: query
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: Expenses list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Expense"
+    post:
+      operationId: createExpense
+      tags: [expenses]
+      summary: Create an expense entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExpenseInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Expense"
+
+  /expenses/{id}:
+    patch:
+      operationId: updateExpense
+      tags: [expenses]
+      summary: Update an expense
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExpenseInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Expense"
+    delete:
+      operationId: deleteExpense
+      tags: [expenses]
+      summary: Delete an expense
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /expense-categories:
+    get:
+      operationId: listExpenseCategories
+      tags: [expenses]
+      summary: List expense categories
+      responses:
+        "200":
+          description: Expense categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExpenseCategory"
+    post:
+      operationId: createExpenseCategory
+      tags: [expenses]
+      summary: Create expense category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExpenseCategoryInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExpenseCategory"
+
+  # ─────── REPORTS ───────
+  /reports/sales:
+    get:
+      operationId: getSalesReport
+      tags: [reports]
+      summary: Get sales report
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+        - name: startDate
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: endDate
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: branchId
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: groupBy
+          in: query
+          schema:
+            type: string
+            enum: [day, week, month, product, category, branch]
+      responses:
+        "200":
+          description: Sales report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalesReport"
+
+  /reports/inventory:
+    get:
+      operationId: getInventoryReport
+      tags: [reports]
+      summary: Get inventory report
+      parameters:
+        - name: branchId
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [levels, movement, valuation, low-stock]
+      responses:
+        "200":
+          description: Inventory report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InventoryReport"
+
+  /reports/profit-loss:
+    get:
+      operationId: getProfitLossReport
+      tags: [reports]
+      summary: Get profit and loss report
+      parameters:
+        - name: startDate
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: endDate
+          in: query
+          schema:
+            type: ["string", "null"]
+      responses:
+        "200":
+          description: P&L report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfitLossReport"
+
+  /reports/debtors:
+    get:
+      operationId: getDebtorsReport
+      tags: [reports]
+      summary: Get customer debtors report
+      responses:
+        "200":
+          description: Debtors list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DebtorEntry"
+
+  /reports/creditors:
+    get:
+      operationId: getCreditorsReport
+      tags: [reports]
+      summary: Get supplier creditors report
+      responses:
+        "200":
+          description: Creditors list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CreditorEntry"
+
+  # ─────── SETTINGS ───────
+  /settings:
+    get:
+      operationId: getSettings
+      tags: [settings]
+      summary: Get business settings
+      responses:
+        "200":
+          description: Settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Settings"
+    patch:
+      operationId: updateSettings
+      tags: [settings]
+      summary: Update business settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SettingsUpdate"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Settings"
+
+  # ─────── USERS ───────
+  /users:
+    get:
+      operationId: listUsers
+      tags: [users]
+      summary: List users in the business
+      responses:
+        "200":
+          description: Users list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+    post:
+      operationId: createUser
+      tags: [users]
+      summary: Create/invite a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /users/me:
+    get:
+      operationId: getCurrentUser
+      tags: [users]
+      summary: Get current authenticated user's profile and role
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /users/{id}:
+    patch:
+      operationId: updateUser
+      tags: [users]
+      summary: Update a user's role or status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+    delete:
+      operationId: deleteUser
+      tags: [users]
+      summary: Deactivate a user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deactivated
+
+  # ─────── RESTAURANT ───────
+  /restaurant/tables:
+    get:
+      operationId: listRestaurantTables
+      tags: [restaurant]
+      summary: List restaurant tables
+      responses:
+        "200":
+          description: Tables list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RestaurantTable"
+    post:
+      operationId: createRestaurantTable
+      tags: [restaurant]
+      summary: Create a restaurant table
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RestaurantTableInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RestaurantTable"
+
+  /restaurant/tables/{id}:
+    patch:
+      operationId: updateRestaurantTable
+      tags: [restaurant]
+      summary: Update table (status, merge, transfer)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RestaurantTableUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RestaurantTable"
+
+  /restaurant/orders:
+    get:
+      operationId: listRestaurantOrders
+      tags: [restaurant]
+      summary: List restaurant orders
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: tableId
+          in: query
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: Orders list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RestaurantOrder"
+    post:
+      operationId: createRestaurantOrder
+      tags: [restaurant]
+      summary: Create a restaurant order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RestaurantOrderInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RestaurantOrder"
+
+  /restaurant/orders/{id}:
+    get:
+      operationId: getRestaurantOrder
+      tags: [restaurant]
+      summary: Get restaurant order detail
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Order detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RestaurantOrder"
+    patch:
+      operationId: updateRestaurantOrder
+      tags: [restaurant]
+      summary: Update order status (send to kitchen, ready, served, etc.)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RestaurantOrderUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RestaurantOrder"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    # ─────── DASHBOARD ───────
+    DashboardSummary:
+      type: object
+      required: [todaySales, todayRevenue, weekSales, monthSales, totalRevenue, totalProfit, totalExpenses, outstandingDebtors, outstandingCreditors]
+      properties:
+        todaySales:
+          type: integer
+        todayRevenue:
+          type: number
+        weekSales:
+          type: integer
+        weekRevenue:
+          type: number
+        monthSales:
+          type: integer
+        monthRevenue:
+          type: number
+        totalRevenue:
+          type: number
+        totalProfit:
+          type: number
+        totalExpenses:
+          type: number
+        outstandingDebtors:
+          type: number
+        outstandingCreditors:
+          type: number
+
+    TopProduct:
+      type: object
+      required: [productId, productName, totalQuantity, totalRevenue]
+      properties:
+        productId:
+          type: integer
+        productName:
+          type: string
+        sku:
+          type: ["string", "null"]
+        totalQuantity:
+          type: number
+        totalRevenue:
+          type: number
+
+    RecentTransaction:
+      type: object
+      required: [id, saleNumber, customerName, total, paymentMethod, createdAt]
+      properties:
+        id:
+          type: integer
+        saleNumber:
+          type: string
+        customerName:
+          type: ["string", "null"]
+        total:
+          type: number
+        paymentMethod:
+          type: string
+        status:
+          type: string
+        createdAt:
+          type: string
+
+    LowStockAlert:
+      type: object
+      required: [productId, productName, currentStock, reorderLevel]
+      properties:
+        productId:
+          type: integer
+        productName:
+          type: string
+        sku:
+          type: ["string", "null"]
+        currentStock:
+          type: number
+        reorderLevel:
+          type: number
+        branchName:
+          type: ["string", "null"]
+
+    # ─────── BRANCH ───────
+    Branch:
+      type: object
+      required: [id, name, isActive, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        address:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+        updatedAt:
+          type: ["string", "null"]
+
+    BranchInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        address:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+
+    BranchUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        address:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        isActive:
+          type: boolean
+
+    # ─────── CATEGORY ───────
+    Category:
+      type: object
+      required: [id, name, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    CategoryInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+
+    # ─────── PRODUCT ───────
+    Product:
+      type: object
+      required: [id, name, sellingPrice, costPrice, isActive, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        sku:
+          type: ["string", "null"]
+        barcode:
+          type: ["string", "null"]
+        categoryId:
+          type: ["integer", "null"]
+        categoryName:
+          type: ["string", "null"]
+        brand:
+          type: ["string", "null"]
+        unit:
+          type: ["string", "null"]
+        costPrice:
+          type: number
+        sellingPrice:
+          type: number
+        taxRate:
+          type: number
+        reorderLevel:
+          type: number
+        description:
+          type: ["string", "null"]
+        imageUrl:
+          type: ["string", "null"]
+        isActive:
+          type: boolean
+        currentStock:
+          type: ["number", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: ["string", "null"]
+
+    ProductInput:
+      type: object
+      required: [name, sellingPrice, costPrice]
+      properties:
+        name:
+          type: string
+        sku:
+          type: string
+        barcode:
+          type: string
+        categoryId:
+          type: ["integer", "null"]
+        brand:
+          type: string
+        unit:
+          type: string
+        costPrice:
+          type: number
+        sellingPrice:
+          type: number
+        taxRate:
+          type: number
+        reorderLevel:
+          type: number
+        description:
+          type: string
+        imageUrl:
+          type: string
+        isActive:
+          type: boolean
+
+    ProductUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        sku:
+          type: string
+        barcode:
+          type: string
+        categoryId:
+          type: ["integer", "null"]
+        brand:
+          type: string
+        unit:
+          type: string
+        costPrice:
+          type: number
+        sellingPrice:
+          type: number
+        taxRate:
+          type: number
+        reorderLevel:
+          type: number
+        description:
+          type: string
+        imageUrl:
+          type: string
+        isActive:
+          type: boolean
+
+    # ─────── INVENTORY ───────
+    InventoryItem:
+      type: object
+      required: [productId, productName, branchId, branchName, quantity, updatedAt]
+      properties:
+        productId:
+          type: integer
+        productName:
+          type: string
+        sku:
+          type: ["string", "null"]
+        branchId:
+          type: integer
+        branchName:
+          type: string
+        quantity:
+          type: number
+        reorderLevel:
+          type: number
+        costPrice:
+          type: number
+        totalValue:
+          type: number
+        updatedAt:
+          type: string
+
+    InventoryTransaction:
+      type: object
+      required: [id, productId, branchId, type, quantityBefore, quantityChanged, quantityAfter, createdAt]
+      properties:
+        id:
+          type: integer
+        productId:
+          type: integer
+        productName:
+          type: string
+        branchId:
+          type: integer
+        branchName:
+          type: string
+        type:
+          type: string
+          enum: [stock_in, stock_out, adjustment, transfer_in, transfer_out, damaged, sale, purchase]
+        quantityBefore:
+          type: number
+        quantityChanged:
+          type: number
+        quantityAfter:
+          type: number
+        reference:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    InventoryTransactionInput:
+      type: object
+      required: [productId, branchId, type, quantityChanged]
+      properties:
+        productId:
+          type: integer
+        branchId:
+          type: integer
+        type:
+          type: string
+          enum: [stock_in, stock_out, adjustment, transfer_in, transfer_out, damaged]
+        quantityChanged:
+          type: number
+        toBranchId:
+          type: ["integer", "null"]
+        reference:
+          type: string
+        notes:
+          type: string
+
+    # ─────── CUSTOMER ───────
+    Customer:
+      type: object
+      required: [id, name, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        phone:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        balance:
+          type: number
+        createdAt:
+          type: string
+
+    CustomerDetail:
+      type: object
+      required: [id, name, balance, transactions, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        phone:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        balance:
+          type: number
+        totalPurchases:
+          type: number
+        totalPaid:
+          type: number
+        transactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/CustomerTransaction"
+        createdAt:
+          type: string
+
+    CustomerTransaction:
+      type: object
+      required: [id, type, amount, createdAt]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        amount:
+          type: number
+        reference:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    CustomerInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        address:
+          type: string
+
+    # ─────── SUPPLIER ───────
+    Supplier:
+      type: object
+      required: [id, name, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        phone:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        balance:
+          type: number
+        createdAt:
+          type: string
+
+    SupplierDetail:
+      type: object
+      required: [id, name, balance, transactions, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        phone:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        balance:
+          type: number
+        totalPurchases:
+          type: number
+        totalPaid:
+          type: number
+        transactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/CustomerTransaction"
+        createdAt:
+          type: string
+
+    SupplierInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        address:
+          type: string
+
+    # ─────── PURCHASE ───────
+    Purchase:
+      type: object
+      required: [id, supplierId, supplierName, status, totalAmount, paidAmount, createdAt]
+      properties:
+        id:
+          type: integer
+        supplierId:
+          type: integer
+        supplierName:
+          type: string
+        branchId:
+          type: ["integer", "null"]
+        status:
+          type: string
+          enum: [pending, received, partial, paid]
+        totalAmount:
+          type: number
+        paidAmount:
+          type: number
+        balanceDue:
+          type: number
+        invoiceNumber:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    PurchaseDetail:
+      type: object
+      required: [id, supplierId, supplierName, status, totalAmount, paidAmount, items, payments, createdAt]
+      properties:
+        id:
+          type: integer
+        supplierId:
+          type: integer
+        supplierName:
+          type: string
+        branchId:
+          type: ["integer", "null"]
+        status:
+          type: string
+        totalAmount:
+          type: number
+        paidAmount:
+          type: number
+        balanceDue:
+          type: number
+        invoiceNumber:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PurchaseItem"
+        payments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Payment"
+        createdAt:
+          type: string
+
+    PurchaseItem:
+      type: object
+      required: [id, productId, productName, quantity, unitCost, total]
+      properties:
+        id:
+          type: integer
+        productId:
+          type: integer
+        productName:
+          type: string
+        quantity:
+          type: number
+        unitCost:
+          type: number
+        total:
+          type: number
+
+    PurchaseInput:
+      type: object
+      required: [supplierId, items]
+      properties:
+        supplierId:
+          type: integer
+        branchId:
+          type: ["integer", "null"]
+        invoiceNumber:
+          type: string
+        notes:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PurchaseItemInput"
+
+    PurchaseItemInput:
+      type: object
+      required: [productId, quantity, unitCost]
+      properties:
+        productId:
+          type: integer
+        quantity:
+          type: number
+        unitCost:
+          type: number
+
+    PurchaseUpdate:
+      type: object
+      properties:
+        invoiceNumber:
+          type: string
+        notes:
+          type: string
+        status:
+          type: string
+
+    # ─────── PAYMENT ───────
+    Payment:
+      type: object
+      required: [id, amount, method, createdAt]
+      properties:
+        id:
+          type: integer
+        amount:
+          type: number
+        method:
+          type: string
+          enum: [cash, mobile_money, card, bank_transfer, credit]
+        reference:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    PaymentInput:
+      type: object
+      required: [amount, method]
+      properties:
+        amount:
+          type: number
+        method:
+          type: string
+          enum: [cash, mobile_money, card, bank_transfer, credit]
+        reference:
+          type: string
+        notes:
+          type: string
+
+    # ─────── SALE ───────
+    Sale:
+      type: object
+      required: [id, saleNumber, branchId, status, subtotal, taxAmount, discountAmount, total, createdAt]
+      properties:
+        id:
+          type: integer
+        saleNumber:
+          type: string
+        branchId:
+          type: integer
+        branchName:
+          type: ["string", "null"]
+        customerId:
+          type: ["integer", "null"]
+        customerName:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [held, completed, voided]
+        subtotal:
+          type: number
+        taxAmount:
+          type: number
+        discountAmount:
+          type: number
+        total:
+          type: number
+        paidAmount:
+          type: number
+        changeAmount:
+          type: number
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    SaleDetail:
+      type: object
+      required: [id, saleNumber, status, subtotal, taxAmount, discountAmount, total, items, payments, createdAt]
+      properties:
+        id:
+          type: integer
+        saleNumber:
+          type: string
+        branchId:
+          type: integer
+        branchName:
+          type: ["string", "null"]
+        customerId:
+          type: ["integer", "null"]
+        customerName:
+          type: ["string", "null"]
+        status:
+          type: string
+        subtotal:
+          type: number
+        taxAmount:
+          type: number
+        discountAmount:
+          type: number
+        total:
+          type: number
+        paidAmount:
+          type: number
+        changeAmount:
+          type: number
+        notes:
+          type: ["string", "null"]
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SaleItem"
+        payments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Payment"
+        createdAt:
+          type: string
+
+    SaleItem:
+      type: object
+      required: [id, productId, productName, quantity, unitPrice, discountAmount, taxAmount, total]
+      properties:
+        id:
+          type: integer
+        productId:
+          type: integer
+        productName:
+          type: string
+        sku:
+          type: ["string", "null"]
+        quantity:
+          type: number
+        unitPrice:
+          type: number
+        discountAmount:
+          type: number
+        taxAmount:
+          type: number
+        total:
+          type: number
+
+    SaleInput:
+      type: object
+      required: [branchId, items, payments]
+      properties:
+        branchId:
+          type: integer
+        customerId:
+          type: ["integer", "null"]
+        discountAmount:
+          type: number
+        notes:
+          type: string
+        status:
+          type: string
+          enum: [held, completed]
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SaleItemInput"
+        payments:
+          type: array
+          items:
+            $ref: "#/components/schemas/PaymentInput"
+
+    SaleItemInput:
+      type: object
+      required: [productId, quantity, unitPrice]
+      properties:
+        productId:
+          type: integer
+        quantity:
+          type: number
+        unitPrice:
+          type: number
+        discountAmount:
+          type: number
+
+    SaleUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [held, completed, voided]
+        customerId:
+          type: ["integer", "null"]
+        notes:
+          type: string
+
+    SalesSummary:
+      type: object
+      required: [totalSales, totalRevenue, totalTax, totalDiscount, averageOrderValue, topPaymentMethod]
+      properties:
+        totalSales:
+          type: integer
+        totalRevenue:
+          type: number
+        totalTax:
+          type: number
+        totalDiscount:
+          type: number
+        averageOrderValue:
+          type: number
+        topPaymentMethod:
+          type: string
+        dailyBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/DailyBreakdown"
+
+    DailyBreakdown:
+      type: object
+      required: [date, sales, revenue]
+      properties:
+        date:
+          type: string
+        sales:
+          type: integer
+        revenue:
+          type: number
+
+    # ─────── EXPENSE ───────
+    Expense:
+      type: object
+      required: [id, amount, description, date, createdAt]
+      properties:
+        id:
+          type: integer
+        categoryId:
+          type: ["integer", "null"]
+        categoryName:
+          type: ["string", "null"]
+        branchId:
+          type: ["integer", "null"]
+        amount:
+          type: number
+        description:
+          type: string
+        date:
+          type: string
+        reference:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        createdAt:
+          type: string
+
+    ExpenseInput:
+      type: object
+      required: [amount, description, date]
+      properties:
+        categoryId:
+          type: ["integer", "null"]
+        branchId:
+          type: ["integer", "null"]
+        amount:
+          type: number
+        description:
+          type: string
+        date:
+          type: string
+        reference:
+          type: string
+
+    ExpenseCategory:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+
+    ExpenseCategoryInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+
+    # ─────── REPORTS ───────
+    SalesReport:
+      type: object
+      required: [period, data]
+      properties:
+        period:
+          type: string
+        totalRevenue:
+          type: number
+        totalSales:
+          type: integer
+        data:
+          type: array
+          items:
+            type: object
+
+    InventoryReport:
+      type: object
+      required: [type, data]
+      properties:
+        type:
+          type: string
+        totalValue:
+          type: number
+        data:
+          type: array
+          items:
+            type: object
+
+    ProfitLossReport:
+      type: object
+      required: [revenue, costOfGoods, grossProfit, expenses, netProfit]
+      properties:
+        revenue:
+          type: number
+        costOfGoods:
+          type: number
+        grossProfit:
+          type: number
+        grossMargin:
+          type: number
+        expenses:
+          type: number
+        netProfit:
+          type: number
+        netMargin:
+          type: number
+
+    DebtorEntry:
+      type: object
+      required: [customerId, customerName, balance]
+      properties:
+        customerId:
+          type: integer
+        customerName:
+          type: string
+        phone:
+          type: ["string", "null"]
+        balance:
+          type: number
+        lastTransactionDate:
+          type: ["string", "null"]
+
+    CreditorEntry:
+      type: object
+      required: [supplierId, supplierName, balance]
+      properties:
+        supplierId:
+          type: integer
+        supplierName:
+          type: string
+        phone:
+          type: ["string", "null"]
+        balance:
+          type: number
+        lastTransactionDate:
+          type: ["string", "null"]
+
+    # ─────── SETTINGS ───────
+    Settings:
+      type: object
+      required: [businessName, currency]
+      properties:
+        businessName:
+          type: string
+        businessLogo:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        currency:
+          type: string
+        taxRate:
+          type: number
+        receiptFooter:
+          type: ["string", "null"]
+        timezone:
+          type: ["string", "null"]
+        businessType:
+          type: ["string", "null"]
+
+    SettingsUpdate:
+      type: object
+      properties:
+        businessName:
+          type: string
+        businessLogo:
+          type: string
+        address:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        currency:
+          type: string
+        taxRate:
+          type: number
+        receiptFooter:
+          type: string
+        timezone:
+          type: string
+        businessType:
+          type: string
+
+    # ─────── USER ───────
+    User:
+      type: object
+      required: [id, clerkId, email, role, isActive, createdAt]
+      properties:
+        id:
+          type: integer
+        clerkId:
+          type: string
+        email:
+          type: string
+        name:
+          type: ["string", "null"]
+        role:
+          type: string
+          enum: [admin, sales]
+        branchId:
+          type: ["integer", "null"]
+        branchName:
+          type: ["string", "null"]
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+
+    UserInput:
+      type: object
+      required: [email, role]
+      properties:
+        email:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+          enum: [admin, sales]
+        branchId:
+          type: ["integer", "null"]
+
+    UserUpdate:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [admin, sales]
+        branchId:
+          type: ["integer", "null"]
+        isActive:
+          type: boolean
+
+    # ─────── RESTAURANT ───────
+    RestaurantTable:
+      type: object
+      required: [id, name, capacity, status, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        capacity:
+          type: integer
+        status:
+          type: string
+          enum: [available, occupied, reserved, cleaning]
+        currentOrderId:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+
+    RestaurantTableInput:
+      type: object
+      required: [name, capacity]
+      properties:
+        name:
+          type: string
+        capacity:
+          type: integer
+
+    RestaurantTableUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        capacity:
+          type: integer
+        status:
+          type: string
+          enum: [available, occupied, reserved, cleaning]
+        mergeWithTableId:
+          type: ["integer", "null"]
+        transferToTableId:
+          type: ["integer", "null"]
+
+    RestaurantOrder:
+      type: object
+      required: [id, tableId, orderType, status, createdAt]
+      properties:
+        id:
+          type: integer
+        tableId:
+          type: ["integer", "null"]
+        tableName:
+          type: ["string", "null"]
+        orderType:
+          type: string
+          enum: [dine_in, take_away, delivery]
+        status:
+          type: string
+          enum: [pending, preparing, ready, served, completed]
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/RestaurantOrderItem"
+        total:
+          type: number
+        notes:
+          type: ["string", "null"]
+        kitchenSentAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    RestaurantOrderItem:
+      type: object
+      required: [id, productId, productName, quantity, unitPrice]
+      properties:
+        id:
+          type: integer
+        productId:
+          type: integer
+        productName:
+          type: string
+        quantity:
+          type: number
+        unitPrice:
+          type: number
+        notes:
+          type: ["string", "null"]
+        status:
+          type: string
+
+    RestaurantOrderInput:
+      type: object
+      required: [orderType, items]
+      properties:
+        tableId:
+          type: ["integer", "null"]
+        orderType:
+          type: string
+          enum: [dine_in, take_away, delivery]
+        notes:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/RestaurantOrderItemInput"
+
+    RestaurantOrderItemInput:
+      type: object
+      required: [productId, quantity, unitPrice]
+      properties:
+        productId:
+          type: integer
+        quantity:
+          type: number
+        unitPrice:
+          type: number
+        notes:
+          type: string
+
+    RestaurantOrderUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [pending, preparing, ready, served, completed]
+        sendToKitchen:
+          type: boolean
+        notes:
+          type: string
