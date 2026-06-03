@@ -7,7 +7,8 @@ RUN corepack enable && corepack prepare pnpm@11.5.0 --activate
 WORKDIR /app
 COPY . .
 
-RUN rm -f pnpm-lock.yaml && pnpm install
+RUN rm -f pnpm-lock.yaml && pnpm install --ignore-scripts
+RUN pnpm rebuild esbuild lightningcss rollup
 RUN pnpm --filter @workspace/api-server build
 
 EXPOSE 3000
