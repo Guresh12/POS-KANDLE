@@ -7,7 +7,7 @@ RUN corepack enable && corepack prepare pnpm@11.5.0 --activate
 WORKDIR /app
 COPY . .
 
-RUN pnpm install --no-frozen-lockfile
+RUN rm -f pnpm-lock.yaml && pnpm install
 RUN pnpm --filter @workspace/api-server build
 
 EXPOSE 3000
