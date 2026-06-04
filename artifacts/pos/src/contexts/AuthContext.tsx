@@ -10,7 +10,7 @@ import type { User as SupabaseUser } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { setAuthTokenGetter, setBaseUrl } from "@workspace/api-client-react";
 
-const API_URL = import.meta.env.VITE_API_URL as string | undefined;
+const API_URL = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/+$/, "");
 
 if (API_URL) {
   setBaseUrl(API_URL);
