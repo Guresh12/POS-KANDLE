@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useListProducts, useListCategories, useCreateProduct, useUpdateProduct, useDeleteProduct, useCreateCategory, getListProductsQueryKey, getListCategoriesQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Plus, Edit2, Trash2, Package } from "lucide-react";
+import { Search, Plus, Edit2, Trash2, Package, Upload, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Product, ProductInput } from "@workspace/api-client-react";
@@ -30,6 +31,8 @@ export default function Products() {
   const [newCatDialog, setNewCatDialog] = useState(false);
   const [newCatName, setNewCatName] = useState("");
   const [newCatDesc, setNewCatDesc] = useState("");
+  const [imageUploading, setImageUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -62,6 +65,22 @@ export default function Products() {
       toast({ title: "Category created" });
     } catch (e: any) {
       toast({ title: "Error", description: e.message, variant: "destructive" });
+    }
+  };
+
+  const handleImageUpload = async (file: File) => {
+    const ext = file.name.split(".").pop();
+    const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    setImageUploading(true);
+    try {
+      const { error } = await supabase.storage.from("product-images").upload(path, file, { upsert: false });
+      if (error) throw error;
+      const { data } = supabase.storage.from("product-images").getPublicUrl(path);
+      setForm(f => ({ ...f, imageUrl: data.publicUrl }));
+    } catch (e: any) {
+      toast({ title: "Image upload failed", description: e.message, variant: "destructive" });
+    } finally {
+      setImageUploading(false);
     }
   };
 
@@ -231,8 +250,43 @@ export default function Products() {
               <Input {...field("unit")} placeholder="pcs, kg, litre..." />
             </div>
             <div className="col-span-2 space-y-1.5">
-              <Label>Image URL</Label>
-              <Input {...field("imageUrl" as any)} placeholder="https://example.com/product-image.jpg" type="url" />
+              <Label>Product Image</Label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={e => { const f = e.target.files?.[0]; if (f) handleImageUpload(f); e.target.value = ""; }}
+              />
+              <div className="flex items-center gap-3">
+                {(form as any).imageUrl ? (
+                  <div className="relative w-16 h-16 shrink-0">
+                    <img src={(form as any).imageUrl} alt="Product" className="w-16 h-16 rounded-md object-cover border border-border" />
+                    <button
+                      type="button"
+                      onClick={() => setForm(f => ({ ...f, imageUrl: "" }))}
+                      className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground rounded-full w-4 h-4 flex items-center justify-center"
+                    >
+                      <X className="w-2.5 h-2.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="w-16 h-16 rounded-md border-2 border-dashed border-border flex items-center justify-center text-muted-foreground shrink-0">
+                    <Package className="w-6 h-6 opacity-40" />
+                  </div>
+                )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={imageUploading}
+                  onClick={() => fileInputRef.current?.click()}
+                  className="gap-2"
+                >
+                  <Upload className="h-3.5 w-3.5" />
+                  {imageUploading ? "Uploading…" : (form as any).imageUrl ? "Replace image" : "Upload image"}
+                </Button>
+              </div>
             </div>
           </div>
           <DialogFooter>

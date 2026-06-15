@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useListPurchases, useCreatePurchase, useUpdatePurchase, getListPurchasesQueryKey, useListSuppliers, useCreateSupplier, getListSuppliersQueryKey, useListBranches, useListProducts, getListProductsQueryKey } from "@workspace/api-client-react";
+import { useListPurchases, useCreatePurchase, useUpdatePurchase, getListPurchasesQueryKey, useListSuppliers, useCreateSupplier, getListSuppliersQueryKey, useListBranches, useListProducts, useCreateProduct, getListProductsQueryKey, useListCategories, getListCategoriesQueryKey } from "@workspace/api-client-react";
 import type { PurchaseInput, PurchaseStatus } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,8 @@ export default function Purchases() {
   const [newItem, setNewItem] = useState({ productId: "", quantity: "1", unitCost: "" });
   const [newSupplierDialog, setNewSupplierDialog] = useState(false);
   const [newSupplierForm, setNewSupplierForm] = useState({ name: "", phone: "", email: "", address: "" });
+  const [newProductDialog, setNewProductDialog] = useState(false);
+  const [newProductForm, setNewProductForm] = useState({ name: "", costPrice: "", sellingPrice: "", unit: "pcs", categoryId: "" });
   const { toast } = useToast();
   const qc = useQueryClient();
 
@@ -42,8 +44,10 @@ export default function Purchases() {
   const { data: products } = useListProducts({ active: true }, {
     query: { queryKey: getListProductsQueryKey({ active: true }) }
   });
+  const { data: categories } = useListCategories();
   const create = useCreatePurchase();
   const update = useUpdatePurchase();
+  const createProduct = useCreateProduct();
 
   const openCreate = () => {
     setForm({ supplierId: "", branchId: "", invoiceNumber: "", notes: "" });
@@ -61,6 +65,30 @@ export default function Purchases() {
       setNewSupplierDialog(false);
       setNewSupplierForm({ name: "", phone: "", email: "", address: "" });
       toast({ title: "Supplier created" });
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    }
+  };
+
+  const handleCreateProduct = async () => {
+    if (!newProductForm.name.trim() || !newProductForm.costPrice) return;
+    try {
+      const created = await createProduct.mutateAsync({
+        data: {
+          name: newProductForm.name.trim(),
+          costPrice: Number(newProductForm.costPrice),
+          sellingPrice: Number(newProductForm.sellingPrice) || Number(newProductForm.costPrice),
+          unit: newProductForm.unit || "pcs",
+          categoryId: newProductForm.categoryId ? Number(newProductForm.categoryId) : null,
+          sku: "", barcode: "", brand: "", taxRate: 0, reorderLevel: 0, description: "", isActive: true,
+        }
+      });
+      await qc.invalidateQueries({ queryKey: getListProductsQueryKey({ active: true }) });
+      const cost = Number(newProductForm.costPrice);
+      setNewItem(n => ({ ...n, productId: String((created as any).id), unitCost: String(cost) }));
+      setNewProductDialog(false);
+      setNewProductForm({ name: "", costPrice: "", sellingPrice: "", unit: "pcs", categoryId: "" });
+      toast({ title: "Product created" });
     } catch (e: any) {
       toast({ title: "Error", description: e.message, variant: "destructive" });
     }
@@ -217,11 +245,15 @@ export default function Purchases() {
               <Label>Items</Label>
               <div className="flex gap-2">
                 <Select value={newItem.productId} onValueChange={v => {
+                  if (v === "_create_") { setNewProductDialog(true); return; }
                   const p = products?.find(x => x.id === Number(v));
                   setNewItem(n => ({ ...n, productId: v, unitCost: String(p?.costPrice ?? "") }));
                 }}>
                   <SelectTrigger className="flex-1"><SelectValue placeholder="Select product" /></SelectTrigger>
-                  <SelectContent>{products?.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}</SelectContent>
+                  <SelectContent>
+                    {products?.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
+                    <SelectItem value="_create_" className="text-primary font-medium border-t mt-1">+ Create new product</SelectItem>
+                  </SelectContent>
                 </Select>
                 <Input className="w-20" type="number" min="1" placeholder="Qty" value={newItem.quantity} onChange={e => setNewItem(n => ({ ...n, quantity: e.target.value }))} />
                 <Input className="w-24" type="number" min="0" step="0.01" placeholder="Cost" value={newItem.unitCost} onChange={e => setNewItem(n => ({ ...n, unitCost: e.target.value }))} />
@@ -273,6 +305,51 @@ export default function Purchases() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Quick create product dialog */}
+      <Dialog open={newProductDialog} onOpenChange={setNewProductDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>New Product</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Name *</Label>
+              <Input value={newProductForm.name} onChange={e => setNewProductForm(f => ({ ...f, name: e.target.value }))} placeholder="Product name" autoFocus />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Cost Price *</Label>
+                <Input type="number" min="0" step="0.01" value={newProductForm.costPrice} onChange={e => setNewProductForm(f => ({ ...f, costPrice: e.target.value }))} placeholder="0.00" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Selling Price</Label>
+                <Input type="number" min="0" step="0.01" value={newProductForm.sellingPrice} onChange={e => setNewProductForm(f => ({ ...f, sellingPrice: e.target.value }))} placeholder="0.00" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Unit</Label>
+                <Input value={newProductForm.unit} onChange={e => setNewProductForm(f => ({ ...f, unit: e.target.value }))} placeholder="pcs, kg…" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Category</Label>
+                <Select value={newProductForm.categoryId || "_none_"} onValueChange={v => setNewProductForm(f => ({ ...f, categoryId: v === "_none_" ? "" : v }))}>
+                  <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_none_">None</SelectItem>
+                    {categories?.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setNewProductDialog(false); setNewProductForm({ name: "", costPrice: "", sellingPrice: "", unit: "pcs", categoryId: "" }); }}>Cancel</Button>
+            <Button onClick={handleCreateProduct} disabled={createProduct.isPending || !newProductForm.name.trim() || !newProductForm.costPrice}>
+              {createProduct.isPending ? "Creating..." : "Create Product"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Quick create supplier dialog */}
       <Dialog open={newSupplierDialog} onOpenChange={setNewSupplierDialog}>
         <DialogContent className="max-w-sm">
