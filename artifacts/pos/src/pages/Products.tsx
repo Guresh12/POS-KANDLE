@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useListProducts, useListCategories, useCreateProduct, useUpdateProduct, useDeleteProduct, getListProductsQueryKey } from "@workspace/api-client-react";
+import { useListProducts, useListCategories, useCreateProduct, useUpdateProduct, useDeleteProduct, useCreateCategory, getListProductsQueryKey, getListCategoriesQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +17,7 @@ import { useCurrency } from "@/hooks/use-currency";
 const EMPTY_FORM: ProductInput = {
   name: "", sku: "", barcode: "", brand: "", unit: "pcs",
   costPrice: 0, sellingPrice: 0, taxRate: 0, reorderLevel: 0,
-  description: "", categoryId: null, isActive: true,
+  description: "", categoryId: null, imageUrl: "", isActive: true,
 };
 
 export default function Products() {
@@ -27,6 +27,9 @@ export default function Products() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
   const [form, setForm] = useState<ProductInput>(EMPTY_FORM);
+  const [newCatDialog, setNewCatDialog] = useState(false);
+  const [newCatName, setNewCatName] = useState("");
+  const [newCatDesc, setNewCatDesc] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -38,12 +41,28 @@ export default function Products() {
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
   const deleteProduct = useDeleteProduct();
+  const createCategory = useCreateCategory();
 
   const openCreate = () => { setEditing(null); setForm(EMPTY_FORM); setDialogOpen(true); };
   const openEdit = (p: Product) => {
     setEditing(p);
-    setForm({ name: p.name, sku: p.sku ?? "", barcode: p.barcode ?? "", brand: p.brand ?? "", unit: p.unit ?? "pcs", costPrice: p.costPrice, sellingPrice: p.sellingPrice, taxRate: p.taxRate, reorderLevel: p.reorderLevel, description: p.description ?? "", categoryId: p.categoryId ?? null, isActive: p.isActive });
+    setForm({ name: p.name, sku: p.sku ?? "", barcode: p.barcode ?? "", brand: p.brand ?? "", unit: p.unit ?? "pcs", costPrice: p.costPrice, sellingPrice: p.sellingPrice, taxRate: p.taxRate, reorderLevel: p.reorderLevel, description: p.description ?? "", categoryId: p.categoryId ?? null, imageUrl: (p as any).imageUrl ?? "", isActive: p.isActive });
     setDialogOpen(true);
+  };
+
+  const handleCreateCategory = async () => {
+    if (!newCatName.trim()) return;
+    try {
+      const created = await createCategory.mutateAsync({ data: { name: newCatName.trim(), description: newCatDesc.trim() || undefined } });
+      await queryClient.invalidateQueries({ queryKey: getListCategoriesQueryKey() });
+      setForm(f => ({ ...f, categoryId: (created as any).id }));
+      setNewCatDialog(false);
+      setNewCatName("");
+      setNewCatDesc("");
+      toast({ title: "Category created" });
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    }
   };
 
   const handleSave = async () => {
@@ -175,11 +194,15 @@ export default function Products() {
             </div>
             <div className="space-y-1.5">
               <Label>Category</Label>
-              <Select value={form.categoryId?.toString() ?? "_none_"} onValueChange={v => setForm(f => ({ ...f, categoryId: v === "_none_" ? null : Number(v) }))}>
+              <Select value={form.categoryId?.toString() ?? "_none_"} onValueChange={v => {
+                if (v === "_create_") { setNewCatDialog(true); return; }
+                setForm(f => ({ ...f, categoryId: v === "_none_" ? null : Number(v) }));
+              }}>
                 <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="_none_">None</SelectItem>
                   {categories?.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
+                  <SelectItem value="_create_" className="text-primary font-medium border-t mt-1">+ Create new category</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -207,11 +230,37 @@ export default function Products() {
               <Label>Unit</Label>
               <Input {...field("unit")} placeholder="pcs, kg, litre..." />
             </div>
+            <div className="col-span-2 space-y-1.5">
+              <Label>Image URL</Label>
+              <Input {...field("imageUrl" as any)} placeholder="https://example.com/product-image.jpg" type="url" />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleSave} disabled={createProduct.isPending || updateProduct.isPending || !form.name}>
               {editing ? "Update" : "Create"} Product
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Quick create category dialog */}
+      <Dialog open={newCatDialog} onOpenChange={setNewCatDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>New Category</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Name *</Label>
+              <Input value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="Category name" autoFocus />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Description</Label>
+              <Input value={newCatDesc} onChange={e => setNewCatDesc(e.target.value)} placeholder="Optional description" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setNewCatDialog(false); setNewCatName(""); setNewCatDesc(""); }}>Cancel</Button>
+            <Button onClick={handleCreateCategory} disabled={createCategory.isPending || !newCatName.trim()}>
+              {createCategory.isPending ? "Creating..." : "Create"}
             </Button>
           </DialogFooter>
         </DialogContent>

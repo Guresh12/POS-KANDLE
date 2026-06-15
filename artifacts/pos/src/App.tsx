@@ -20,6 +20,7 @@ import Expenses from "@/pages/Expenses";
 import Reports from "@/pages/Reports";
 import Restaurant from "@/pages/Restaurant";
 import Settings from "@/pages/Settings";
+import Categories from "@/pages/Categories";
 import Accounting from "@/pages/Accounting";
 import NotFound from "@/pages/not-found";
 
@@ -46,6 +47,7 @@ const ROUTE_ROLES: Record<string, string[]> = {
   "/reports":    ["admin", "manager"],
   "/restaurant": ["admin", "manager"],
   "/accounting": ["admin", "manager"],
+  "/categories": ["admin", "manager"],
   "/settings":   ["admin"],
 };
 
@@ -93,6 +95,7 @@ function ProtectedApp() {
         <Route path="/reports"    component={() => <RoleGuard path="/reports"><Reports /></RoleGuard>} />
         <Route path="/restaurant" component={() => <RoleGuard path="/restaurant"><Restaurant /></RoleGuard>} />
         <Route path="/accounting" component={() => <RoleGuard path="/accounting"><Accounting /></RoleGuard>} />
+        <Route path="/categories" component={() => <RoleGuard path="/categories"><Categories /></RoleGuard>} />
         <Route path="/settings"   component={() => <RoleGuard path="/settings"><Settings /></RoleGuard>} />
         <Route component={NotFound} />
       </Switch>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { useListBranches, useCreateBranch, useUpdateBranch, useListCategories, useCreateCategory, useUpdateCategory, useDeleteCategory, useGetSettings, useUpdateSettings, useListUsers, useCreateUser, useUpdateUser, getListBranchesQueryKey, getListCategoriesQueryKey, getListUsersQueryKey } from "@workspace/api-client-react";
-import type { BranchInput, CategoryInput, SettingsUpdate, UserInput, User, Branch, Category } from "@workspace/api-client-react";
+import { useListBranches, useCreateBranch, useUpdateBranch, useGetSettings, useUpdateSettings, useListUsers, useCreateUser, useUpdateUser, getListBranchesQueryKey, getListUsersQueryKey } from "@workspace/api-client-react";
+import type { BranchInput, SettingsUpdate, UserInput, User, Branch } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Plus, Edit2, Trash2, Building2, Tag, Users, Globe } from "lucide-react";
+import { Plus, Edit2, Building2, Users, Globe } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -27,10 +27,6 @@ export default function Settings() {
   const [editBranchId, setEditBranchId] = useState<number | null>(null);
   const [branchForm, setBranchForm] = useState<BranchInput>({ name: "", address: "", phone: "", email: "" });
 
-  const [catDialog, setCatDialog] = useState(false);
-  const [editCatId, setEditCatId] = useState<number | null>(null);
-  const [catForm, setCatForm] = useState<CategoryInput>({ name: "", description: "" });
-
   const [settingsForm, setSettingsForm] = useState<SettingsUpdate>({});
   const [settingsDirty, setSettingsDirty] = useState(false);
 
@@ -40,15 +36,11 @@ export default function Settings() {
   const [newPin, setNewPin] = useState("");
 
   const { data: branches, isLoading: branchLoading } = useListBranches();
-  const { data: categories, isLoading: catLoading } = useListCategories();
   const { data: settings } = useGetSettings();
   const { data: users, isLoading: usersLoading } = useListUsers();
 
   const createBranch = useCreateBranch();
   const updateBranch = useUpdateBranch();
-  const createCategory = useCreateCategory();
-  const updateCategory = useUpdateCategory();
-  const deleteCategory = useDeleteCategory();
   const updateSettings = useUpdateSettings();
   const createUser = useCreateUser();
   const updateUser = useUpdateUser();
@@ -98,30 +90,6 @@ export default function Settings() {
       qc.invalidateQueries({ queryKey: getListBranchesQueryKey() });
       setBranchDialog(false);
       toast({ title: editBranchId ? "Branch updated" : "Branch created" });
-    } catch (e: any) {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
-    }
-  };
-
-  const openCreateCat = () => { setEditCatId(null); setCatForm({ name: "", description: "" }); setCatDialog(true); };
-  const openEditCat = (c: Category) => { setEditCatId(c.id); setCatForm({ name: c.name, description: c.description ?? "" }); setCatDialog(true); };
-  const handleSaveCat = async () => {
-    try {
-      if (editCatId) await updateCategory.mutateAsync({ id: editCatId, data: catForm });
-      else await createCategory.mutateAsync({ data: catForm });
-      qc.invalidateQueries({ queryKey: getListCategoriesQueryKey() });
-      setCatDialog(false);
-      toast({ title: editCatId ? "Category updated" : "Category created" });
-    } catch (e: any) {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
-    }
-  };
-  const handleDeleteCat = async (id: number) => {
-    if (!confirm("Delete this category?")) return;
-    try {
-      await deleteCategory.mutateAsync({ id });
-      qc.invalidateQueries({ queryKey: getListCategoriesQueryKey() });
-      toast({ title: "Category deleted" });
     } catch (e: any) {
       toast({ title: "Error", description: e.message, variant: "destructive" });
     }
@@ -194,7 +162,6 @@ export default function Settings() {
         <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="general"><Globe className="h-3.5 w-3.5 mr-1.5" />General</TabsTrigger>
           <TabsTrigger value="branches"><Building2 className="h-3.5 w-3.5 mr-1.5" />Branches</TabsTrigger>
-          <TabsTrigger value="categories"><Tag className="h-3.5 w-3.5 mr-1.5" />Categories</TabsTrigger>
           <TabsTrigger value="users"><Users className="h-3.5 w-3.5 mr-1.5" />Users & Roles</TabsTrigger>
         </TabsList>
 
@@ -298,48 +265,6 @@ export default function Settings() {
           </div>
         </TabsContent>
 
-        {/* Categories */}
-        <TabsContent value="categories" className="mt-5">
-          <div className="flex justify-between items-center mb-4">
-            <div>
-              <h3 className="font-semibold">Product Categories</h3>
-              <p className="text-sm text-muted-foreground">Organise your product catalog</p>
-            </div>
-            <Button size="sm" onClick={openCreateCat}><Plus className="mr-2 h-4 w-4" />Add Category</Button>
-          </div>
-          <div className="border rounded-lg overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead className="w-20"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {catLoading ? (
-                  Array.from({ length: 3 }).map((_, i) => (
-                    <TableRow key={i}>{Array.from({ length: 3 }).map((_, j) => <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>)}</TableRow>
-                  ))
-                ) : !categories?.length ? (
-                  <TableRow><TableCell colSpan={3} className="text-center py-10 text-muted-foreground">No categories yet</TableCell></TableRow>
-                ) : (categories as Category[]).map(c => (
-                  <TableRow key={c.id}>
-                    <TableCell className="font-medium">{c.name}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{c.description ?? "—"}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditCat(c)}><Edit2 className="h-3.5 w-3.5" /></Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDeleteCat(c.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </TabsContent>
-
         {/* Users */}
         <TabsContent value="users" className="mt-5">
           <div className="flex justify-between items-center mb-4">
@@ -425,23 +350,6 @@ export default function Settings() {
             <Button variant="outline" onClick={() => setBranchDialog(false)}>Cancel</Button>
             <Button onClick={handleSaveBranch} disabled={createBranch.isPending || updateBranch.isPending || !branchForm.name}>
               {editBranchId ? "Update" : "Create"} Branch
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Category Dialog */}
-      <Dialog open={catDialog} onOpenChange={setCatDialog}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>{editCatId ? "Edit Category" : "New Category"}</DialogTitle></DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-1.5"><Label>Name *</Label><Input value={catForm.name} onChange={e => setCatForm(p => ({ ...p, name: e.target.value }))} placeholder="Category name" /></div>
-            <div className="space-y-1.5"><Label>Description</Label><Input value={catForm.description ?? ""} onChange={e => setCatForm(p => ({ ...p, description: e.target.value }))} placeholder="Optional description" /></div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCatDialog(false)}>Cancel</Button>
-            <Button onClick={handleSaveCat} disabled={createCategory.isPending || updateCategory.isPending || !catForm.name}>
-              {editCatId ? "Update" : "Create"} Category
             </Button>
           </DialogFooter>
         </DialogContent>

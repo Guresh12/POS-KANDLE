@@ -176,7 +176,15 @@ export default function POS() {
                   onClick={() => addItem(product)}
                 >
                   <CardContent className="p-4 flex flex-col items-center text-center gap-2">
-                    <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold text-lg">
+                    {(product as any).imageUrl ? (
+                      <img
+                        src={(product as any).imageUrl}
+                        alt={product.name}
+                        className="w-14 h-14 rounded-full object-cover border border-border"
+                        onError={e => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden"); }}
+                      />
+                    ) : null}
+                    <div className={`w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold text-lg${(product as any).imageUrl ? " hidden" : ""}`}>
                       {product.name.substring(0, 2).toUpperCase()}
                     </div>
                     <div className="w-full">

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useListPurchases, useCreatePurchase, useUpdatePurchase, getListPurchasesQueryKey, useListSuppliers, useListBranches, useListProducts, getListProductsQueryKey } from "@workspace/api-client-react";
+import { useListPurchases, useCreatePurchase, useUpdatePurchase, getListPurchasesQueryKey, useListSuppliers, useCreateSupplier, getListSuppliersQueryKey, useListBranches, useListProducts, getListProductsQueryKey } from "@workspace/api-client-react";
 import type { PurchaseInput, PurchaseStatus } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,8 @@ export default function Purchases() {
   const [form, setForm] = useState({ supplierId: "", branchId: "", invoiceNumber: "", notes: "" });
   const [items, setItems] = useState<ItemDraft[]>([]);
   const [newItem, setNewItem] = useState({ productId: "", quantity: "1", unitCost: "" });
+  const [newSupplierDialog, setNewSupplierDialog] = useState(false);
+  const [newSupplierForm, setNewSupplierForm] = useState({ name: "", phone: "", email: "", address: "" });
   const { toast } = useToast();
   const qc = useQueryClient();
 
@@ -35,6 +37,7 @@ export default function Purchases() {
     query: { queryKey: getListPurchasesQueryKey(filterParams) }
   });
   const { data: suppliers } = useListSuppliers();
+  const createSupplier = useCreateSupplier();
   const { data: branches } = useListBranches();
   const { data: products } = useListProducts({ active: true }, {
     query: { queryKey: getListProductsQueryKey({ active: true }) }
@@ -47,6 +50,20 @@ export default function Purchases() {
     setItems([]);
     setNewItem({ productId: "", quantity: "1", unitCost: "" });
     setDialogOpen(true);
+  };
+
+  const handleCreateSupplier = async () => {
+    if (!newSupplierForm.name.trim()) return;
+    try {
+      const created = await createSupplier.mutateAsync({ data: { name: newSupplierForm.name.trim(), phone: newSupplierForm.phone || undefined, email: newSupplierForm.email || undefined, address: newSupplierForm.address || undefined } });
+      await qc.invalidateQueries({ queryKey: getListSuppliersQueryKey() });
+      setForm(f => ({ ...f, supplierId: String((created as any).id) }));
+      setNewSupplierDialog(false);
+      setNewSupplierForm({ name: "", phone: "", email: "", address: "" });
+      toast({ title: "Supplier created" });
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    }
   };
 
   const addItem = () => {
@@ -168,9 +185,15 @@ export default function Purchases() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>Supplier *</Label>
-                <Select value={form.supplierId} onValueChange={v => setForm(f => ({ ...f, supplierId: v }))}>
+                <Select value={form.supplierId} onValueChange={v => {
+                  if (v === "_create_") { setNewSupplierDialog(true); return; }
+                  setForm(f => ({ ...f, supplierId: v }));
+                }}>
                   <SelectTrigger><SelectValue placeholder="Select supplier" /></SelectTrigger>
-                  <SelectContent>{suppliers?.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}</SelectContent>
+                  <SelectContent>
+                    {suppliers?.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
+                    <SelectItem value="_create_" className="text-primary font-medium border-t mt-1">+ Create new supplier</SelectItem>
+                  </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
@@ -246,6 +269,36 @@ export default function Purchases() {
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleSave} disabled={create.isPending || !form.supplierId || items.length === 0}>
               {create.isPending ? "Creating..." : "Create Purchase Order"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Quick create supplier dialog */}
+      <Dialog open={newSupplierDialog} onOpenChange={setNewSupplierDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>New Supplier</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Name *</Label>
+              <Input value={newSupplierForm.name} onChange={e => setNewSupplierForm(f => ({ ...f, name: e.target.value }))} placeholder="Supplier name" autoFocus />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Phone</Label>
+              <Input value={newSupplierForm.phone} onChange={e => setNewSupplierForm(f => ({ ...f, phone: e.target.value }))} placeholder="Phone number" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Email</Label>
+              <Input type="email" value={newSupplierForm.email} onChange={e => setNewSupplierForm(f => ({ ...f, email: e.target.value }))} placeholder="Email address" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Address</Label>
+              <Input value={newSupplierForm.address} onChange={e => setNewSupplierForm(f => ({ ...f, address: e.target.value }))} placeholder="Address" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setNewSupplierDialog(false); setNewSupplierForm({ name: "", phone: "", email: "", address: "" }); }}>Cancel</Button>
+            <Button onClick={handleCreateSupplier} disabled={createSupplier.isPending || !newSupplierForm.name.trim()}>
+              {createSupplier.isPending ? "Creating..." : "Create Supplier"}
             </Button>
           </DialogFooter>
         </DialogContent>

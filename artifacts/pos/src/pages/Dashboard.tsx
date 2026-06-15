@@ -1,10 +1,13 @@
-import { useGetDashboardSummary, useGetTopProducts, useGetRecentTransactions, useGetLowStockAlerts } from "@workspace/api-client-react";
+import { useState } from "react";
+import { useGetDashboardSummary, useGetTopProducts, useGetRecentTransactions, useGetLowStockAlerts, useGetSalesSummary, useGetSale } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TrendingUp, DollarSign, ShoppingCart, AlertTriangle, Users, Package } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
-import { useGetSalesSummary } from "@workspace/api-client-react";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { TrendingUp, DollarSign, AlertTriangle, Users, Printer, Receipt } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { useCurrency } from "@/hooks/use-currency";
 
 function StatCard({ title, value, icon: Icon, sub, loading }: { title: string; value: string; icon: any; sub?: string; loading?: boolean }) {
@@ -28,11 +31,16 @@ function StatCard({ title, value, icon: Icon, sub, loading }: { title: string; v
 
 export default function Dashboard() {
   const { fmt } = useCurrency();
+  const [receiptSaleId, setReceiptSaleId] = useState<number | null>(null);
   const { data: summary, isLoading: sumLoading } = useGetDashboardSummary();
   const { data: topProducts, isLoading: topLoading } = useGetTopProducts({ limit: 8 });
   const { data: recent, isLoading: recentLoading } = useGetRecentTransactions({ limit: 6 });
   const { data: lowStock } = useGetLowStockAlerts();
   const { data: salesSummary } = useGetSalesSummary({ period: "month" });
+  const { data: receiptSale, isLoading: receiptLoading } = useGetSale(
+    receiptSaleId ?? 0,
+    { query: { enabled: !!receiptSaleId, queryKey: ["sale", receiptSaleId] } }
+  );
 
   return (
     <div className="space-y-6">
@@ -137,7 +145,10 @@ export default function Dashboard() {
         {/* Recent Transactions */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Recent Transactions</CardTitle>
+            <CardTitle className="text-base flex items-center gap-2">
+              Recent Transactions
+              <Receipt className="h-4 w-4 text-muted-foreground ml-auto" />
+            </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             {recentLoading ? (
@@ -149,15 +160,24 @@ export default function Dashboard() {
             ) : (
               <div className="divide-y divide-border">
                 {recent.map(txn => (
-                  <div key={txn.id} className="px-6 py-3 flex items-center gap-3">
+                  <div key={txn.id} className="px-4 py-3 flex items-center gap-3">
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm">{txn.saleNumber}</p>
                       <p className="text-xs text-muted-foreground">{txn.customerName}</p>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right shrink-0">
                       <p className="font-semibold text-sm">{fmt(txn.total)}</p>
                       <Badge variant={txn.status === "completed" ? "default" : "secondary"} className="text-xs mt-0.5">{txn.status}</Badge>
                     </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
+                      title="View receipt"
+                      onClick={() => setReceiptSaleId(txn.id)}
+                    >
+                      <Printer className="h-3.5 w-3.5" />
+                    </Button>
                   </div>
                 ))}
               </div>
@@ -165,6 +185,76 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Receipt Dialog */}
+      <Dialog open={!!receiptSaleId} onOpenChange={open => { if (!open) setReceiptSaleId(null); }}>
+        <DialogContent className="sm:max-w-sm print:shadow-none print:border-none">
+          <DialogHeader>
+            <DialogTitle className="text-center">Receipt</DialogTitle>
+          </DialogHeader>
+          {receiptLoading ? (
+            <div className="space-y-3">
+              {[1,2,3,4,5].map(i => <Skeleton key={i} className="h-5 w-full" />)}
+            </div>
+          ) : receiptSale ? (
+            <div className="space-y-3 text-sm">
+              <div className="text-center space-y-0.5">
+                <p className="font-bold text-base">SwiftPOS</p>
+                <p className="text-muted-foreground text-xs">{new Date((receiptSale as any).createdAt).toLocaleString()}</p>
+                <p className="font-mono text-xs text-muted-foreground">{(receiptSale as any).saleNumber}</p>
+                {(receiptSale as any).customerName && (
+                  <p className="text-xs text-muted-foreground">Customer: {(receiptSale as any).customerName}</p>
+                )}
+              </div>
+              <Separator />
+              <div className="space-y-1.5">
+                {(receiptSale as any).items?.map((item: any, i: number) => (
+                  <div key={i} className="flex justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="truncate font-medium">{item.productName}</p>
+                      <p className="text-xs text-muted-foreground">{item.quantity} × {fmt(item.unitPrice)}</p>
+                    </div>
+                    <span className="font-medium shrink-0">{fmt(item.total)}</span>
+                  </div>
+                ))}
+              </div>
+              <Separator />
+              <div className="space-y-1 text-xs">
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Subtotal</span><span>{fmt(Number((receiptSale as any).subtotal ?? 0))}</span>
+                </div>
+                {Number((receiptSale as any).taxAmount) > 0 && (
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Tax</span><span>{fmt(Number((receiptSale as any).taxAmount))}</span>
+                  </div>
+                )}
+                {Number((receiptSale as any).discountAmount) > 0 && (
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Discount</span><span>-{fmt(Number((receiptSale as any).discountAmount))}</span>
+                  </div>
+                )}
+                <div className="flex justify-between font-bold text-base pt-1 border-t">
+                  <span>Total</span><span>{fmt(Number((receiptSale as any).total))}</span>
+                </div>
+                {(receiptSale as any).payments?.[0] && (
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Payment ({(receiptSale as any).payments[0].method.replace("_", " ")})</span>
+                    <span>{fmt(Number((receiptSale as any).payments[0].amount))}</span>
+                  </div>
+                )}
+              </div>
+              <Separator />
+              <p className="text-center text-xs text-muted-foreground">Thank you for your purchase!</p>
+            </div>
+          ) : null}
+          <DialogFooter className="gap-2">
+            <Button variant="outline" size="sm" onClick={() => window.print()} className="gap-1.5">
+              <Printer className="h-3.5 w-3.5" />Print
+            </Button>
+            <Button size="sm" onClick={() => setReceiptSaleId(null)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
